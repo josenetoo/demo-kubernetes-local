@@ -48,6 +48,39 @@ Esta documentação descreve os componentes, responsabilidades e relações do p
 [HPA] <--- métricas CPU --- [metrics-server] <--- kubelets
 ```
 
+## Diagrama (Mermaid)
+
+```mermaid
+graph LR
+  %% Acesso externo via NodePort
+  C[Cliente] -->|HTTP :30080| S[Service demo-app<br/>NodePort 30080]
+  S -->|targetPort 8080| D{{Deployment demo-app}}
+
+  subgraph Pods do Deployment
+    P1[Pod demo-app]
+    P2[Pod demo-app]
+  end
+
+  %% Selector do Service aponta para os Pods com label app=demo-app
+  D --- P1
+  D --- P2
+
+  %% Probes de saúde
+  P1 -->|/health| PR[(Liveness/Readiness Probes)]
+  P2 -->|/health| PR
+
+  %% ConfigMap e Secret via envFrom
+  P1 -->|envFrom| CM[(ConfigMap: demo-config)]
+  P2 -->|envFrom| CM
+  P1 -->|envFrom| SE[(Secret: demo-secret)]
+  P2 -->|envFrom| SE
+
+  %% HPA baseado em CPU (50%), escala 2-5 réplicas
+  HPA[HPA demo-app<br/>CPU 50% • 2–5 réplicas]
+  HPA --- D
+  HPA -. métricas .-> MS[metrics-server]
+```
+
 ## Decisões de Design
 
 - Node.js + Express pela simplicidade e familiaridade.
